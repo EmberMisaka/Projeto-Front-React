@@ -7,7 +7,5 @@
 
   Run `npm i` to install the dependencies.
 
-  Run `npm install -g create-vite` to install vite
-
   Run `npm run dev` to start the development server.
   

@@ -38,7 +38,6 @@ export default function ChatCheckout() {
   const [selectedConversation, setSelectedConversation] = useState(conversationId);
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLength = useRef(0);
 
   // Payment states
   const [showPayment, setShowPayment] = useState(false);
@@ -67,10 +66,7 @@ export default function ChatCheckout() {
   }, [selectedConversation, user, markAsRead]);
 
   useEffect(() => {
-    if (conversationMessages.length > prevMessagesLength.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-    prevMessagesLength.current = conversationMessages.length;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationMessages]);
 
   const handleSendMessage = () => {
