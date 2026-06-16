@@ -32,6 +32,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { mockOrders, mockServices, categoryNames } from '../data/mockData';
+import { criarServico, Servico } from '../services/api';
 import { toast } from 'sonner';
 
 export default function Provider() {
@@ -39,6 +40,9 @@ export default function Provider() {
   const { conversations } = useChat();
   const navigate = useNavigate();
   const [showAddService, setShowAddService] = useState(false);
+  const [newServico, setNewServico] = useState({ titulo: '', descricao: '', preco: '', prazoDias: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [createdServices, setCreatedServices] = useState<Servico[]>([]);
 
   // Count unread messages
   const unreadCount = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
@@ -67,6 +71,30 @@ export default function Provider() {
     };
     const config = variants[status] || variants.pending;
     return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const handleSaveService = async () => {
+    if (!newServico.titulo.trim() || !newServico.descricao.trim() || !newServico.preco || !newServico.prazoDias) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await criarServico({
+        titulo: newServico.titulo,
+        descricao: newServico.descricao,
+        preco: parseInt(newServico.preco),
+        prazoDias: parseInt(newServico.prazoDias),
+      });
+      setCreatedServices(prev => [res.servico, ...prev]);
+      toast.success('Serviço publicado com sucesso!');
+      setShowAddService(false);
+      setNewServico({ titulo: '', descricao: '', preco: '', prazoDias: '' });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.erro || 'Erro ao publicar serviço');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleLogout = () => {
@@ -237,51 +265,54 @@ export default function Provider() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="title">Título</Label>
+                          <Label htmlFor="title">Título *</Label>
                           <Input
                             id="title"
                             placeholder="Ex: Desenvolvimento de Landing Page"
+                            value={newServico.titulo}
+                            onChange={(e) => setNewServico(s => ({ ...s, titulo: e.target.value }))}
                             className="bg-background"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="category">Categoria</Label>
-                          <Select>
-                            <SelectTrigger className="bg-background">
-                              <SelectValue placeholder="Selecione uma categoria" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="frontend">Frontend</SelectItem>
-                              <SelectItem value="uxui">UX/UI</SelectItem>
-                              <SelectItem value="backend">Backend</SelectItem>
-                              <SelectItem value="ia">IA</SelectItem>
-                              <SelectItem value="dados">Dados</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="description">Descrição</Label>
+                          <Label htmlFor="description">Descrição *</Label>
                           <Textarea
                             id="description"
                             placeholder="Descreva seu serviço..."
+                            value={newServico.descricao}
+                            onChange={(e) => setNewServico(s => ({ ...s, descricao: e.target.value }))}
                             className="bg-background"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="price">Preço (R$)</Label>
-                          <Input
-                            id="price"
-                            type="number"
-                            placeholder="1500"
-                            className="bg-background"
-                          />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="price">Preço (R$) *</Label>
+                            <Input
+                              id="price"
+                              type="number"
+                              min="1"
+                              placeholder="1500"
+                              value={newServico.preco}
+                              onChange={(e) => setNewServico(s => ({ ...s, preco: e.target.value }))}
+                              className="bg-background"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="prazo">Prazo (dias) *</Label>
+                            <Input
+                              id="prazo"
+                              type="number"
+                              min="1"
+                              placeholder="7"
+                              value={newServico.prazoDias}
+                              onChange={(e) => setNewServico(s => ({ ...s, prazoDias: e.target.value }))}
+                              className="bg-background"
+                            />
+                          </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button onClick={() => {
-                            toast.success('Serviço adicionado com sucesso!');
-                            setShowAddService(false);
-                          }}>
-                            Salvar
+                          <Button onClick={handleSaveService} disabled={isSaving}>
+                            {isSaving ? 'Publicando...' : 'Publicar Serviço'}
                           </Button>
                           <Button variant="outline" onClick={() => setShowAddService(false)}>
                             Cancelar
@@ -292,6 +323,27 @@ export default function Provider() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {createdServices.map((srv) => (
+                      <Card key={`real-${srv.id}`} className="bg-card border-primary/30">
+                        <CardHeader>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">{srv.titulo}</CardTitle>
+                              <Badge className="mt-2 bg-primary/20 text-primary">Publicado</Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-muted-foreground mb-4">{srv.descricao}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="text-2xl font-bold">
+                              R$ {srv.preco.toLocaleString('pt-BR')}
+                            </div>
+                            <span className="text-sm text-muted-foreground">{srv.prazoDias} dias</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                     {providerServices.map((service) => (
                       <Card key={service.id} className="bg-card border-border/50">
                         <CardHeader>

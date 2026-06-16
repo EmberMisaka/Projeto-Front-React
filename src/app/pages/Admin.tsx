@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -46,7 +46,8 @@ import {
   LogOut,
   Eye,
 } from 'lucide-react';
-import { mockUserProfiles, mockModerations, mockOrders, mockServices } from '../data/mockData';
+import { mockUserProfiles, mockModerations, mockOrders } from '../data/mockData';
+import { listarServicosAdmin, deletarServicoAdmin, Servico } from '../services/api';
 import { toast } from 'sonner';
 
 type ModerationType = 'warning' | 'restriction' | 'ban';
@@ -61,11 +62,13 @@ export default function Admin() {
   const [moderationReason, setModerationReason] = useState('');
   const [moderationDays, setModerationDays] = useState('1');
   const [moderationHours, setModerationHours] = useState('0');
+  const [apiServices, setApiServices] = useState<Servico[]>([]);
 
-  // Check if user is admin (in real app, this would be from backend)
-  if (user?.type !== 'provider' && user?.type !== 'client') {
-    // For demo purposes, allow access
-  }
+  useEffect(() => {
+    listarServicosAdmin()
+      .then(res => setApiServices(res.servicos))
+      .catch(() => {}); // not admin role or server offline
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -384,16 +387,37 @@ export default function Admin() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {mockServices.slice(0, 5).map((service) => (
-                      <div key={service.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    {apiServices.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum serviço cadastrado ainda.
+                      </p>
+                    )}
+                    {apiServices.slice(0, 5).map((service) => (
+                      <div key={service.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-2">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{service.title}</p>
-                          <p className="text-sm text-muted-foreground">{service.providerName}</p>
+                          <p className="font-medium truncate">{service.titulo}</p>
+                          <p className="text-sm text-muted-foreground">ID do provedor: {service.provedorId}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold">⭐ {service.rating}</p>
-                          <p className="text-xs text-muted-foreground">{service.reviews} reviews</p>
+                        <div className="text-right shrink-0">
+                          <p className="font-semibold">R$ {service.preco.toLocaleString('pt-BR')}</p>
+                          <p className="text-xs text-muted-foreground">{service.prazoDias} dias</p>
                         </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive shrink-0"
+                          onClick={async () => {
+                            try {
+                              await deletarServicoAdmin(service.id);
+                              setApiServices(prev => prev.filter(s => s.id !== service.id));
+                              toast.success('Serviço removido com sucesso');
+                            } catch {
+                              toast.error('Erro ao remover serviço');
+                            }
+                          }}
+                        >
+                          <Ban className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))}
                   </div>

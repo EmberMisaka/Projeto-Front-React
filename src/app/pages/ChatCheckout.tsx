@@ -25,6 +25,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { mockServices } from '../data/mockData';
+import { pagarPedido } from '../services/api';
 import { toast } from 'sonner';
 
 type PaymentMethod = 'pix' | 'credit' | 'debit';
@@ -38,7 +39,6 @@ export default function ChatCheckout() {
   const [selectedConversation, setSelectedConversation] = useState(conversationId);
   const [messageText, setMessageText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const prevMessagesLength = useRef(0);
 
   // Payment states
   const [showPayment, setShowPayment] = useState(false);
@@ -55,7 +55,14 @@ export default function ChatCheckout() {
 
   const conversation = getConversation(selectedConversation || '');
   const conversationMessages = messages[selectedConversation || ''] || [];
-  const service = mockServices.find(s => s.id === conversation?.serviceId);
+  const mockService = mockServices.find(s => s.id === conversation?.serviceId);
+  // Use conversation metadata for real services, fall back to mock
+  const service = mockService ?? (conversation ? {
+    id: conversation.serviceId,
+    title: conversation.serviceName,
+    price: conversation.servicePrice ?? 0,
+    providerName: conversation.providerName,
+  } : null);
 
   // Mock PIX QR Code
   const pixCode = 'BR.GOV.BCB.PIX.000000000000000000000000000000000000000000000';
@@ -67,10 +74,7 @@ export default function ChatCheckout() {
   }, [selectedConversation, user, markAsRead]);
 
   useEffect(() => {
-    if (conversationMessages.length > prevMessagesLength.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-    prevMessagesLength.current = conversationMessages.length;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationMessages]);
 
   const handleSendMessage = () => {
@@ -134,25 +138,24 @@ export default function ChatCheckout() {
   };
 
   const handlePayment = async () => {
+    const pedidoId = conversation?.pedidoId;
+
+    if (!pedidoId) {
+      toast.error('Nenhum pedido associado a esta conversa. Contrate o serviço novamente.');
+      return;
+    }
+
     setIsProcessing(true);
-
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    setIsProcessing(false);
-    setPaymentSuccess(true);
-    toast.success('Pagamento realizado com sucesso!');
-
-    // Reset payment form after success
-    setTimeout(() => {
-      setShowPayment(false);
-      setPaymentSuccess(false);
-      setCardNumber('');
-      setCardName('');
-      setCardExpiry('');
-      setCardCVV('');
-      setInstallments('1');
-    }, 3000);
+    try {
+      const res = await pagarPedido(pedidoId);
+      toast.success('Redirecionando para o pagamento...');
+      window.open(res.link_do_pagamento, '_blank', 'noopener,noreferrer');
+      setPaymentSuccess(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.erro || 'Erro ao processar pagamento');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const otherUser = conversation

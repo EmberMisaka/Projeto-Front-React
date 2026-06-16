@@ -15,6 +15,8 @@ export interface Conversation {
   id: string;
   serviceId: string;
   serviceName: string;
+  servicePrice?: number;
+  pedidoId?: number;
   providerId: string;
   providerName: string;
   providerAvatar?: string;
@@ -26,10 +28,19 @@ export interface Conversation {
   unreadCount: number;
 }
 
+export interface CreateConversationMeta {
+  serviceName?: string;
+  servicePrice?: number;
+  providerName?: string;
+  clientName?: string;
+  pedidoId?: number;
+}
+
 interface ChatContextType {
   conversations: Conversation[];
   messages: Record<string, Message[]>;
-  createConversation: (serviceId: string, providerId: string, clientId: string) => string;
+  createConversation: (serviceId: string, providerId: string, clientId: string, meta?: CreateConversationMeta) => string;
+  updateConversationPedido: (conversationId: string, pedidoId: number) => void;
   sendMessage: (conversationId: string, senderId: string, content: string) => void;
   markAsRead: (conversationId: string, userId: string) => void;
   getConversation: (conversationId: string) => Conversation | undefined;
@@ -37,12 +48,12 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Mock conversations
 const mockConversations: Conversation[] = [
   {
     id: 'conv-1',
     serviceId: '1',
     serviceName: 'Desenvolvimento de Landing Page em React',
+    servicePrice: 1500,
     providerId: '1',
     providerName: 'DevPro',
     clientId: '2',
@@ -53,7 +64,6 @@ const mockConversations: Conversation[] = [
   },
 ];
 
-// Mock messages
 const mockMessages: Record<string, Message[]> = {
   'conv-1': [
     {
@@ -111,32 +121,46 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const createConversation = (
     serviceId: string,
     providerId: string,
-    clientId: string
+    clientId: string,
+    meta?: CreateConversationMeta
   ): string => {
-    // Check if conversation already exists
     const existing = conversations.find(
       c => c.serviceId === serviceId && c.providerId === providerId && c.clientId === clientId
     );
-    
+
     if (existing) {
+      // Update pedidoId if a new one is provided
+      if (meta?.pedidoId && !existing.pedidoId) {
+        setConversations(prev =>
+          prev.map(c => c.id === existing.id ? { ...c, pedidoId: meta.pedidoId } : c)
+        );
+      }
       return existing.id;
     }
 
     const newConversation: Conversation = {
       id: `conv-${Date.now()}`,
       serviceId,
-      serviceName: 'Novo Serviço',
+      serviceName: meta?.serviceName ?? 'Novo Serviço',
+      servicePrice: meta?.servicePrice,
+      pedidoId: meta?.pedidoId,
       providerId,
-      providerName: 'Provedor',
+      providerName: meta?.providerName ?? 'Provedor',
       clientId,
-      clientName: 'Cliente',
+      clientName: meta?.clientName ?? 'Cliente',
       unreadCount: 0,
     };
 
-    setConversations([...conversations, newConversation]);
-    setMessages({ ...messages, [newConversation.id]: [] });
+    setConversations(prev => [...prev, newConversation]);
+    setMessages(prev => ({ ...prev, [newConversation.id]: [] }));
 
     return newConversation.id;
+  };
+
+  const updateConversationPedido = (conversationId: string, pedidoId: number) => {
+    setConversations(prev =>
+      prev.map(c => c.id === conversationId ? { ...c, pedidoId } : c)
+    );
   };
 
   const sendMessage = (conversationId: string, senderId: string, content: string) => {
@@ -153,14 +177,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       read: false,
     };
 
-    setMessages({
-      ...messages,
-      [conversationId]: [...(messages[conversationId] || []), newMessage],
-    });
+    setMessages(prev => ({
+      ...prev,
+      [conversationId]: [...(prev[conversationId] || []), newMessage],
+    }));
 
-    // Update conversation
-    setConversations(
-      conversations.map(c =>
+    setConversations(prev =>
+      prev.map(c =>
         c.id === conversationId
           ? {
               ...c,
@@ -174,19 +197,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   };
 
   const markAsRead = (conversationId: string, userId: string) => {
-    const conversationMessages = messages[conversationId] || [];
-    
-    setMessages({
-      ...messages,
-      [conversationId]: conversationMessages.map(m =>
+    setMessages(prev => ({
+      ...prev,
+      [conversationId]: (prev[conversationId] || []).map(m =>
         m.senderId !== userId ? { ...m, read: true } : m
       ),
-    });
+    }));
 
-    setConversations(
-      conversations.map(c =>
-        c.id === conversationId ? { ...c, unreadCount: 0 } : c
-      )
+    setConversations(prev =>
+      prev.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c)
     );
   };
 
@@ -200,6 +219,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         conversations,
         messages,
         createConversation,
+        updateConversationPedido,
         sendMessage,
         markAsRead,
         getConversation,

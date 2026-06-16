@@ -16,9 +16,10 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [username, setUsername] = useState('');
   const [photo, setPhoto] = useState('');
+  const [tecnologias, setTecnologias] = useState('');
   const [userType, setUserType] = useState<UserType>('client');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -26,16 +27,14 @@ export default function Register() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhoto(reader.result as string);
-      };
+      reader.onloadend = () => setPhoto(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast.error('As senhas não coincidem');
       return;
@@ -49,19 +48,107 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const success = await register(email, password, username, userType, photo);
+      const success = await register(
+        email,
+        password,
+        username,
+        userType,
+        userType === 'provider' ? tecnologias : undefined,
+        photo || undefined
+      );
       if (success) {
         toast.success('Conta criada com sucesso!');
         navigate(userType === 'provider' ? '/provider' : '/client');
       } else {
         toast.error('Erro ao criar conta');
       }
-    } catch (error) {
-      toast.error('Erro ao criar conta');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao criar conta');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const PhotoUpload = ({ id }: { id: string }) => (
+    <div className="flex flex-col items-center gap-4 mb-4">
+      <Avatar className="w-24 h-24">
+        <AvatarImage src={photo} />
+        <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
+          <Upload className="w-8 h-8" />
+        </AvatarFallback>
+      </Avatar>
+      <div>
+        <Label htmlFor={id} className="cursor-pointer">
+          <Button type="button" variant="outline" size="sm" asChild>
+            <span>Escolher Foto</span>
+          </Button>
+        </Label>
+        <Input
+          id={id}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoUpload}
+        />
+      </div>
+    </div>
+  );
+
+  const CommonFields = ({ prefix }: { prefix: string }) => (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-username`}>Nome de Usuário</Label>
+        <Input
+          id={`${prefix}-username`}
+          type="text"
+          placeholder="seu_usuario"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          className="bg-input-background"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-email`}>Email</Label>
+        <Input
+          id={`${prefix}-email`}
+          type="email"
+          placeholder="seu@email.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="bg-input-background"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-password`}>Senha</Label>
+        <Input
+          id={`${prefix}-password`}
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="bg-input-background"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${prefix}-confirm`}>Confirmar Senha</Label>
+        <Input
+          id={`${prefix}-confirm`}
+          type="password"
+          placeholder="••••••••"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          className="bg-input-background"
+        />
+      </div>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -87,81 +174,8 @@ export default function Register() {
 
             <TabsContent value="client">
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex flex-col items-center gap-4 mb-4">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={photo} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                      <Upload className="w-8 h-8" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <Label htmlFor="photo-client" className="cursor-pointer">
-                      <Button type="button" variant="outline" size="sm" asChild>
-                        <span>Escolher Foto</span>
-                      </Button>
-                    </Label>
-                    <Input
-                      id="photo-client"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePhotoUpload}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="username">Nome de Usuário</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="seu_usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    className="bg-input-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-input-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="bg-input-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirmar Senha</Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="bg-input-background"
-                  />
-                </div>
-
+                <PhotoUpload id="photo-client" />
+                <CommonFields prefix="client" />
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Criando conta...' : 'Criar Conta como Contratante'}
                 </Button>
@@ -170,81 +184,20 @@ export default function Register() {
 
             <TabsContent value="provider">
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex flex-col items-center gap-4 mb-4">
-                  <Avatar className="w-24 h-24">
-                    <AvatarImage src={photo} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white">
-                      <Upload className="w-8 h-8" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <Label htmlFor="photo-provider" className="cursor-pointer">
-                      <Button type="button" variant="outline" size="sm" asChild>
-                        <span>Escolher Foto</span>
-                      </Button>
-                    </Label>
-                    <Input
-                      id="photo-provider"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePhotoUpload}
-                    />
-                  </div>
-                </div>
-
+                <PhotoUpload id="photo-provider" />
+                <CommonFields prefix="provider" />
                 <div className="space-y-2">
-                  <Label htmlFor="username-provider">Nome de Usuário</Label>
+                  <Label htmlFor="tecnologias">Tecnologias</Label>
                   <Input
-                    id="username-provider"
+                    id="tecnologias"
                     type="text"
-                    placeholder="seu_usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
+                    placeholder="React, Node.js, Python..."
+                    value={tecnologias}
+                    onChange={(e) => setTecnologias(e.target.value)}
                     className="bg-input-background"
                   />
+                  <p className="text-xs text-muted-foreground">Separe as tecnologias por vírgula</p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email-provider">Email</Label>
-                  <Input
-                    id="email-provider"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-input-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password-provider">Senha</Label>
-                  <Input
-                    id="password-provider"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="bg-input-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password-provider">Confirmar Senha</Label>
-                  <Input
-                    id="confirm-password-provider"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="bg-input-background"
-                  />
-                </div>
-
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Criando conta...' : 'Criar Conta como Provedor'}
                 </Button>

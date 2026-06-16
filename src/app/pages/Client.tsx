@@ -23,6 +23,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { mockServices, categoryNames, Service } from '../data/mockData';
+import { criarPedido } from '../services/api';
 import { toast } from 'sonner';
 
 const categoryIcons = {
@@ -94,15 +95,33 @@ export default function Client() {
   const ServiceCard = ({ service }: { service: Service }) => {
     const Icon = categoryIcons[service.category];
     
-    const handleHireService = () => {
+    const handleHireService = async () => {
       if (!user) {
         toast.error('Você precisa estar logado para contratar um serviço');
         navigate('/login');
         return;
       }
-      
-      // Create or get existing conversation
-      const convId = createConversation(service.id, service.providerId, user.id);
+
+      let pedidoId: number | undefined;
+
+      try {
+        const serviceIdNum = parseInt(service.id);
+        if (!isNaN(serviceIdNum)) {
+          const res = await criarPedido(serviceIdNum);
+          pedidoId = res.pedido.id;
+        }
+      } catch {
+        // Service may not exist in DB yet; proceed with chat only
+      }
+
+      const convId = createConversation(service.id, service.providerId, user.id, {
+        serviceName: service.title,
+        servicePrice: service.price,
+        providerName: service.providerName,
+        clientName: user.username,
+        pedidoId,
+      });
+
       navigate(`/chat/${convId}`);
     };
     
