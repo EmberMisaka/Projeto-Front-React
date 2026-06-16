@@ -4,7 +4,10 @@ const API_BASE = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:300
 
 export type BackendRole = 'contratante' | 'provedor' | 'ADM';
 
+<<<<<<< HEAD
 // ── Auth ──────────────────────────────────────────────────────────────────────
+=======
+>>>>>>> 20e70c8fb2207e6a52fd409bc70f5de3b6858285
 export interface RegisterPayload {
   nome: string;
   email: string;
@@ -35,6 +38,7 @@ export interface JWTPayload {
   exp: number;
 }
 
+<<<<<<< HEAD
 // ── Serviços ──────────────────────────────────────────────────────────────────
 export interface CriarServicoPayload {
   titulo: string;
@@ -69,11 +73,14 @@ export interface PagarPedidoResponse {
 }
 
 // ── Axios instance ────────────────────────────────────────────────────────────
+=======
+>>>>>>> 20e70c8fb2207e6a52fd409bc70f5de3b6858285
 const api = axios.create({
   baseURL: `${API_BASE}/api`,
   headers: { 'Content-Type': 'application/json' },
 });
 
+<<<<<<< HEAD
 // Attach JWT token automatically to every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('tm_token');
@@ -84,6 +91,8 @@ api.interceptors.request.use((config) => {
 });
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
+=======
+>>>>>>> 20e70c8fb2207e6a52fd409bc70f5de3b6858285
 export async function cadastrar(data: RegisterPayload): Promise<RegisterResponse> {
   const res = await api.post<RegisterResponse>('/usuarios/cadastro', data);
   return res.data;
@@ -94,6 +103,7 @@ export async function fazerLogin(data: LoginPayload): Promise<LoginResponse> {
   return res.data;
 }
 
+<<<<<<< HEAD
 // ── Serviços ──────────────────────────────────────────────────────────────────
 export async function criarServico(data: CriarServicoPayload): Promise<{ mensagem: string; servico: Servico }> {
   const res = await api.post<{ mensagem: string; servico: Servico }>('/servicos', data);
@@ -122,6 +132,8 @@ export async function deletarServicoAdmin(id: number): Promise<void> {
 }
 
 // ── JWT helper ────────────────────────────────────────────────────────────────
+=======
+>>>>>>> 20e70c8fb2207e6a52fd409bc70f5de3b6858285
 export function decodeJWT(token: string): JWTPayload | null {
   try {
     const payload = token.split('.')[1];
